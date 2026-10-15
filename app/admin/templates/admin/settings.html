@@ -1,0 +1,411 @@
+{% extends "admin/base.html" %}
+
+{% block title %}Settings - Auto-Mate Admin{% endblock %}
+
+{% block content %}
+<div class="fade-in">
+    <!-- Page Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1 class="h3 mb-0">
+            <i class="fas fa-cog me-2 text-primary"></i>System Settings
+        </h1>
+        <button class="btn btn-primary btn-sm" onclick="saveSettings()">
+            <i class="fas fa-save me-1"></i>Save Changes
+        </button>
+    </div>
+
+    <!-- Settings Tabs -->
+    <ul class="nav nav-tabs mb-4" id="settingsTabs" role="tablist">
+        <li class="nav-item" role="presentation">
+            <button class="nav-link active" id="general-tab" data-bs-toggle="tab" data-bs-target="#general" type="button" role="tab">
+                <i class="fas fa-sliders-h me-1"></i>General
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="security-tab" data-bs-toggle="tab" data-bs-target="#security" type="button" role="tab">
+                <i class="fas fa-shield-alt me-1"></i>Security
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="notifications-tab" data-bs-toggle="tab" data-bs-target="#notifications" type="button" role="tab">
+                <i class="fas fa-bell me-1"></i>Notifications
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="maintenance-tab" data-bs-toggle="tab" data-bs-target="#maintenance" type="button" role="tab">
+                <i class="fas fa-tools me-1"></i>Maintenance
+            </button>
+        </li>
+    </ul>
+
+    <!-- Tab Content -->
+    <div class="tab-content" id="settingsTabsContent">
+        <!-- General Settings -->
+        <div class="tab-pane fade show active" id="general" role="tabpanel">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title mb-4">
+                        <i class="fas fa-sliders-h me-2"></i>General Settings
+                    </h5>
+                    
+                    <div class="mb-3">
+                        <label for="appName" class="form-label">Application Name</label>
+                        <input type="text" class="form-control" id="appName" value="Auto-Mate">
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="timezone" class="form-label">Timezone</label>
+                        <select class="form-select" id="timezone">
+                            <option value="UTC" selected>UTC</option>
+                            <option value="America/New_York">Eastern Time (ET)</option>
+                            <option value="America/Chicago">Central Time (CT)</option>
+                            <option value="America/Denver">Mountain Time (MT)</option>
+                            <option value="America/Los_Angeles">Pacific Time (PT)</option>
+                        </select>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="dateFormat" class="form-label">Date Format</label>
+                        <select class="form-select" id="dateFormat">
+                            <option value="Y-m-d">YYYY-MM-DD</option>
+                            <option value="m/d/Y">MM/DD/YYYY</option>
+                            <option value="d/m/Y">DD/MM/YYYY</option>
+                        </select>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="recordsPerPage" class="form-label">Records Per Page</label>
+                        <select class="form-select" id="recordsPerPage">
+                            <option value="10">10</option>
+                            <option value="25" selected>25</option>
+                            <option value="50">50</option>
+                            <option value="100">100</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-check form-switch mb-3">
+                        <input class="form-check-input" type="checkbox" id="darkMode" checked>
+                        <label class="form-check-label" for="darkMode">Dark Mode</label>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Security Settings -->
+        <div class="tab-pane fade" id="security" role="tabpanel">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title mb-4">
+                        <i class="fas fa-shield-alt me-2"></i>Security Settings
+                    </h5>
+                    
+                    <div class="alert alert-warning">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        Changing these settings may affect system security. Proceed with caution.
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="adminUsername" class="form-label">Admin Username</label>
+                        <input type="text" class="form-control" id="adminUsername" value="{{ username }}">
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="currentPassword" class="form-label">Current Password</label>
+                        <input type="password" class="form-control" id="currentPassword">
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="newPassword" class="form-label">New Password</label>
+                        <input type="password" class="form-control" id="newPassword">
+                        <small class="text-muted">Leave blank to keep current password</small>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="confirmPassword" class="form-label">Confirm New Password</label>
+                        <input type="password" class="form-control" id="confirmPassword">
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="sessionTimeout" class="form-label">Session Timeout (minutes)</label>
+                        <input type="number" class="form-control" id="sessionTimeout" value="30" min="5" max="1440">
+                    </div>
+                    
+                    <div class="form-check form-switch mb-3">
+                        <input class="form-check-input" type="checkbox" id="require2FA" checked>
+                        <label class="form-check-label" for="require2FA">Require Two-Factor Authentication</label>
+                    </div>
+                    
+                    <div class="form-check form-switch mb-3">
+                        <input class="form-check-input" type="checkbox" id="loginAlerts" checked>
+                        <label class="form-check-label" for="loginAlerts">Email Login Alerts</label>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Notification Settings -->
+        <div class="tab-pane fade" id="notifications" role="tabpanel">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title mb-4">
+                        <i class="fas fa-bell me-2"></i>Notification Settings
+                    </h5>
+                    
+                    <h6 class="mb-3">Email Notifications</h6>
+                    <div class="form-check form-switch mb-3">
+                        <input class="form-check-input" type="checkbox" id="emailNotifications" checked>
+                        <label class="form-check-label" for="emailNotifications">Enable Email Notifications</label>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="notificationEmail" class="form-label">Notification Email Address</label>
+                        <input type="email" class="form-control" id="notificationEmail" value="admin@example.com">
+                    </div>
+                    
+                    <hr class="my-4">
+                    
+                    <h6 class="mb-3">System Alerts</h6>
+                    <div class="form-check mb-3">
+                        <input class="form-check-input" type="checkbox" id="alertNewUser" checked>
+                        <label class="form-check-label" for="alertNewUser">New user registration</label>
+                    </div>
+                    
+                    <div class="form-check mb-3">
+                        <input class="form-check-input" type="checkbox" id="alertFailedLogin" checked>
+                        <label class="form-check-label" for="alertFailedLogin">Failed login attempts</label>
+                    </div>
+                    
+                    <div class="form-check mb-3">
+                        <input class="form-check-input" type="checkbox" id="alertSystemError" checked>
+                        <label class="form-check-label" for="alertSystemError">System errors</label>
+                    </div>
+                    
+                    <div class="form-check mb-3">
+                        <input class="form-check-input" type="checkbox" id="alertHighUsage">
+                        <label class="form-check-label" for="alertHighUsage">High system usage</label>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Maintenance Settings -->
+        <div class="tab-pane fade" id="maintenance" role="tabpanel">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title mb-4">
+                        <i class="fas fa-tools me-2"></i>Maintenance Settings
+                    </h5>
+                    
+                    <div class="alert alert-danger">
+                        <i class="fas fa-exclamation-circle me-2"></i>
+                        These settings affect system operations. Use with caution.
+                    </div>
+                    
+                    <div class="mb-4">
+                        <h6 class="mb-3">Database Maintenance</h6>
+                        <button class="btn btn-outline-primary me-2" onclick="backupDatabase()">
+                            <i class="fas fa-database me-1"></i>Backup Database
+                        </button>
+                        <button class="btn btn-outline-secondary me-2" onclick="optimizeDatabase()">
+                            <i class="fas fa-magic me-1"></i>Optimize Database
+                        </button>
+                    </div>
+                    
+                    <div class="mb-4">
+                        <h6 class="mb-3">Cache Management</h6>
+                        <button class="btn btn-outline-info me-2" onclick="clearCache()">
+                            <i class="fas fa-broom me-1"></i>Clear Cache
+                        </button>
+                        <button class="btn btn-outline-warning me-2" onclick="rebuildSearchIndex()">
+                            <i class="fas fa-search me-1"></i>Rebuild Search Index
+                        </button>
+                    </div>
+                    
+                    <div class="mb-4">
+                        <h6 class="mb-3">System Logs</h6>
+                        <button class="btn btn-outline-secondary me-2" onclick="downloadLogs()">
+                            <i class="fas fa-download me-1"></i>Download Logs
+                        </button>
+                        <button class="btn btn-outline-danger" onclick="clearLogs()">
+                            <i class="fas fa-trash me-1"></i>Clear Logs
+                        </button>
+                    </div>
+                    
+                    <div class="mb-4">
+                        <h6 class="mb-3">System Mode</h6>
+                        <div class="form-check form-switch mb-3">
+                            <input class="form-check-input" type="checkbox" id="maintenanceMode">
+                            <label class="form-check-label" for="maintenanceMode">Maintenance Mode</label>
+                        </div>
+                        <div class="mb-3" id="maintenanceMessageContainer" style="display: none;">
+                            <label for="maintenanceMessage" class="form-label">Maintenance Message</label>
+                            <textarea class="form-control" id="maintenanceMessage" rows="3">We're currently performing maintenance. Please check back later.</textarea>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Show/hide maintenance message based on mode
+document.getElementById('maintenanceMode').addEventListener('change', function() {
+    document.getElementById('maintenanceMessageContainer').style.display = 
+        this.checked ? 'block' : 'none';
+});
+
+function saveSettings() {
+    // Collect all settings from the form
+    const settings = {
+        general: {
+            appName: document.getElementById('appName').value,
+            timezone: document.getElementById('timezone').value,
+            dateFormat: document.getElementById('dateFormat').value,
+            recordsPerPage: document.getElementById('recordsPerPage').value,
+            darkMode: document.getElementById('darkMode').checked
+        },
+        security: {
+            adminUsername: document.getElementById('adminUsername').value,
+            currentPassword: document.getElementById('currentPassword').value,
+            newPassword: document.getElementById('newPassword').value,
+            confirmPassword: document.getElementById('confirmPassword').value,
+            sessionTimeout: document.getElementById('sessionTimeout').value,
+            require2FA: document.getElementById('require2FA').checked,
+            loginAlerts: document.getElementById('loginAlerts').checked
+        },
+        notifications: {
+            emailNotifications: document.getElementById('emailNotifications').checked,
+            notificationEmail: document.getElementById('notificationEmail').value,
+            alertNewUser: document.getElementById('alertNewUser').checked,
+            alertFailedLogin: document.getElementById('alertFailedLogin').checked,
+            alertSystemError: document.getElementById('alertSystemError').checked,
+            alertHighUsage: document.getElementById('alertHighUsage').checked
+        },
+        maintenance: {
+            maintenanceMode: document.getElementById('maintenanceMode').checked,
+            maintenanceMessage: document.getElementById('maintenanceMessage').value
+        }
+    };
+
+    // Validate passwords if changing
+    if (settings.security.newPassword) {
+        if (settings.security.newPassword !== settings.security.confirmPassword) {
+            alert('New password and confirmation do not match');
+            return;
+        }
+        if (!settings.security.currentPassword) {
+            alert('Please enter your current password to change it');
+            return;
+        }
+    }
+
+    // Send to server
+    fetch('/admin/api/settings', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(settings)
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            adminUtils.showNotification('Settings saved successfully', 'success');
+            
+            // Apply dark mode immediately if changed
+            if (settings.general.darkMode) {
+                document.body.classList.add('admin-dark');
+            } else {
+                document.body.classList.remove('admin-dark');
+            }
+        } else {
+            adminUtils.showNotification(data.message || 'Error saving settings', 'danger');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        adminUtils.showNotification('Error saving settings', 'danger');
+    });
+}
+
+// Maintenance functions
+function backupDatabase() {
+    if (confirm('Create a backup of the database? This may take a few moments.')) {
+        fetch('/admin/api/maintenance/backup')
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    adminUtils.showNotification('Backup created successfully', 'success');
+                } else {
+                    adminUtils.showNotification(data.message || 'Backup failed', 'danger');
+                }
+            });
+    }
+}
+
+function optimizeDatabase() {
+    if (confirm('Optimize database tables? This may improve performance.')) {
+        fetch('/admin/api/maintenance/optimize')
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    adminUtils.showNotification('Database optimized successfully', 'success');
+                } else {
+                    adminUtils.showNotification(data.message || 'Optimization failed', 'danger');
+                }
+            });
+    }
+}
+
+function clearCache() {
+    if (confirm('Clear all cached data? This may temporarily slow down the system.')) {
+        fetch('/admin/api/maintenance/clear-cache')
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    adminUtils.showNotification('Cache cleared successfully', 'success');
+                } else {
+                    adminUtils.showNotification(data.message || 'Cache clearing failed', 'danger');
+                }
+            });
+    }
+}
+
+function rebuildSearchIndex() {
+    if (confirm('Rebuild search index? This may take a few minutes.')) {
+        fetch('/admin/api/maintenance/rebuild-index')
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    adminUtils.showNotification('Search index rebuilt successfully', 'success');
+                } else {
+                    adminUtils.showNotification(data.message || 'Rebuild failed', 'danger');
+                }
+            });
+    }
+}
+
+function downloadLogs() {
+    window.open('/admin/api/maintenance/download-logs', '_blank');
+}
+
+function clearLogs() {
+    if (confirm('Clear all system logs? This action cannot be undone.')) {
+        fetch('/admin/api/maintenance/clear-logs', {
+            method: 'POST'
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                adminUtils.showNotification('Logs cleared successfully', 'success');
+            } else {
+                adminUtils.showNotification(data.message || 'Failed to clear logs', 'danger');
+            }
+        });
+    }
+}
+</script>
+{% endblock %}

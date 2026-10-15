@@ -1,0 +1,318 @@
+{% extends "admin/base.html" %}
+
+{% block title %}User Management - Auto-Mate Admin{% endblock %}
+
+{% block content %}
+<div class="fade-in">
+    <!-- Page Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1 class="h3 mb-0">
+            <i class="fas fa-users me-2 text-primary"></i>User Management
+        </h1>
+        <div class="d-flex gap-2">
+            <button class="btn btn-outline-primary btn-sm" onclick="exportUsers()">
+                <i class="fas fa-download me-1"></i>Export CSV
+            </button>
+            <button class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#addUserModal">
+                <i class="fas fa-plus me-1"></i>Add User
+            </button>
+        </div>
+    </div>
+
+    <!-- Filters and Search -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <div class="row g-3">
+                <div class="col-md-4">
+                    <div class="input-group">
+                        <span class="input-group-text">
+                            <i class="fas fa-search"></i>
+                        </span>
+                        <input type="text" class="form-control" placeholder="Search users..." id="userSearch">
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <select class="form-select" id="statusFilter">
+                        <option value="">All Status</option>
+                        <option value="active">Active</option>
+                        <option value="inactive">Inactive</option>
+                        <option value="banned">Banned</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <select class="form-select" id="sortBy">
+                        <option value="last_active">Sort by Last Active</option>
+                        <option value="session_count">Sort by Sessions</option>
+                        <option value="user_id">Sort by User ID</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <button class="btn btn-outline-secondary w-100" onclick="clearFilters()">
+                        <i class="fas fa-times me-1"></i>Clear
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Users Table -->
+    <div class="card">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <h5 class="mb-0">
+                <i class="fas fa-table me-2"></i>All Users
+                <span class="badge bg-primary ms-2" id="userCount">{{ users|length }}</span>
+            </h5>
+            <div class="d-flex align-items-center gap-3">
+                <small class="text-muted">Showing <span id="showingCount">{{ users|length }}</span> of {{ users|length }} users</small>
+                <div class="btn-group btn-group-sm" role="group">
+                    <button type="button" class="btn btn-outline-secondary" onclick="changeView('table')">
+                        <i class="fas fa-table"></i>
+                    </button>
+                    <button type="button" class="btn btn-outline-secondary" onclick="changeView('grid')">
+                        <i class="fas fa-th"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover mb-0" id="usersTable">
+                    <thead class="table-light">
+                        <tr>
+                            <th>
+                                <input type="checkbox" class="form-check-input" id="selectAll">
+                            </th>
+                            <th>User ID</th>
+                            <th>Status</th>
+                            <th>Sessions</th>
+                            <th>Messages</th>
+                            <th>Last Active</th>
+                            <th>Joined</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for user in users %}
+                        <tr data-user-id="{{ user.user_id }}">
+                            <td>
+                                <input type="checkbox" class="form-check-input user-checkbox" value="{{ user.user_id }}">
+                            </td>
+                            <td>
+                                <div class="d-flex align-items-center">
+                                    <div class="avatar-sm bg-primary text-white rounded-circle d-flex align-items-center justify-content-center me-2">
+                                        {{ user.user_id[:2].upper() }}
+                                    </div>
+                                    <div>
+                                        <strong>{{ user.user_id }}</strong>
+                                        <br><small class="text-muted">ID: {{ user.user_id[-8:] }}</small>
+                                    </div>
+                                </div>
+                            </td>
+                            <td>
+                                {% if user.last_active %}
+                                    <span class="badge bg-success">Active</span>
+                                {% else %}
+                                    <span class="badge bg-secondary">Inactive</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <span class="badge bg-info">{{ user.session_count }}</span>
+                            </td>
+                            <td>
+                                <span class="text-muted">{{ user.message_count or 0 }}</span>
+                            </td>
+                            <td>
+                                {% if user.last_active %}
+                                    <span title="{{ user.last_active }}">
+                                        {{ user.last_active.strftime('%Y-%m-%d %H:%M') }}
+                                    </span>
+                                    <br><small class="text-muted">{{ user.last_active_relative or 'Recently' }}</small>
+                                {% else %}
+                                    <span class="text-muted">Never</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <span class="text-muted">{{ user.created_at.strftime('%Y-%m-%d') if user.created_at else 'Unknown' }}</span>
+                            </td>
+                            <td>
+                                <div class="btn-group btn-group-sm" role="group">
+                                    <a href="/admin/sessions?user_id={{ user.user_id }}" class="btn btn-outline-primary" title="View Sessions">
+                                        <i class="fas fa-comments"></i>
+                                    </a>
+                                    <button class="btn btn-outline-info" onclick="viewUserDetails('{{ user.user_id }}')" title="View Details">
+                                        <i class="fas fa-eye"></i>
+                                    </button>
+                                    <button class="btn btn-outline-warning" onclick="editUser('{{ user.user_id }}')" title="Edit User">
+                                        <i class="fas fa-edit"></i>
+                                    </button>
+                                    <button class="btn btn-outline-danger" onclick="deleteUser('{{ user.user_id }}')" title="Delete User">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        <div class="card-footer">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <button class="btn btn-outline-danger btn-sm" id="bulkDeleteBtn" style="display: none;" onclick="bulkDelete()">
+                        <i class="fas fa-trash me-1"></i>Delete Selected
+                    </button>
+                </div>
+                <nav>
+                    <ul class="pagination pagination-sm mb-0">
+                        <li class="page-item disabled">
+                            <a class="page-link" href="#" tabindex="-1">Previous</a>
+                        </li>
+                        <li class="page-item active"><a class="page-link" href="#">1</a></li>
+                        <li class="page-item"><a class="page-link" href="#">2</a></li>
+                        <li class="page-item"><a class="page-link" href="#">3</a></li>
+                        <li class="page-item">
+                            <a class="page-link" href="#">Next</a>
+                        </li>
+                    </ul>
+                </nav>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Add User Modal -->
+<div class="modal fade" id="addUserModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Add New User</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="addUserForm">
+                    <div class="mb-3">
+                        <label for="newUserId" class="form-label">User ID</label>
+                        <input type="text" class="form-control" id="newUserId" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="userEmail" class="form-label">Email (Optional)</label>
+                        <input type="email" class="form-control" id="userEmail">
+                    </div>
+                    <div class="mb-3">
+                        <label for="userStatus" class="form-label">Status</label>
+                        <select class="form-select" id="userStatus">
+                            <option value="active">Active</option>
+                            <option value="inactive">Inactive</option>
+                        </select>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" onclick="addUser()">Add User</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function exportUsers() {
+    window.open('/admin/export/users', '_blank');
+}
+
+function clearFilters() {
+    document.getElementById('userSearch').value = '';
+    document.getElementById('statusFilter').value = '';
+    document.getElementById('sortBy').value = 'last_active';
+    // Trigger search to reset table
+    const event = new Event('input');
+    document.getElementById('userSearch').dispatchEvent(event);
+}
+
+function changeView(viewType) {
+    // Implementation for changing between table and grid view
+    console.log('Changing view to:', viewType);
+}
+
+function viewUserDetails(userId) {
+    // Open user details modal or page
+    window.open(`/admin/users/${userId}`, '_blank');
+}
+
+function editUser(userId) {
+    // Open edit user modal
+    console.log('Editing user:', userId);
+}
+
+function deleteUser(userId) {
+    if (confirm(`Are you sure you want to delete user ${userId}?`)) {
+        // Send delete request
+        fetch(`/admin/users/${userId}`, {
+            method: 'DELETE'
+        }).then(() => {
+            location.reload();
+        });
+    }
+}
+
+function addUser() {
+    const userId = document.getElementById('newUserId').value;
+    const email = document.getElementById('userEmail').value;
+    const status = document.getElementById('userStatus').value;
+    
+    // Send add user request
+    fetch('/admin/users', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+            user_id: userId,
+            email: email,
+            status: status
+        })
+    }).then(() => {
+        location.reload();
+    });
+}
+
+function bulkDelete() {
+    const selected = Array.from(document.querySelectorAll('.user-checkbox:checked')).map(cb => cb.value);
+    if (selected.length > 0 && confirm(`Delete ${selected.length} selected users?`)) {
+        // Send bulk delete request
+        fetch('/admin/users/bulk-delete', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                user_ids: selected
+            })
+        }).then(() => {
+            location.reload();
+        });
+    }
+}
+
+// Handle select all checkbox
+document.getElementById('selectAll').addEventListener('change', function() {
+    const checkboxes = document.querySelectorAll('.user-checkbox');
+    checkboxes.forEach(cb => cb.checked = this.checked);
+    toggleBulkActions();
+});
+
+// Handle individual checkboxes
+document.querySelectorAll('.user-checkbox').forEach(cb => {
+    cb.addEventListener('change', toggleBulkActions);
+});
+
+function toggleBulkActions() {
+    const selected = document.querySelectorAll('.user-checkbox:checked').length;
+    const bulkBtn = document.getElementById('bulkDeleteBtn');
+    bulkBtn.style.display = selected > 0 ? 'inline-block' : 'none';
+}
+</script>
+{% endblock %}

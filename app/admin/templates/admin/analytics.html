@@ -1,0 +1,349 @@
+{% extends "admin/base.html" %}
+
+{% block title %}Analytics - Auto-Mate Admin{% endblock %}
+
+{% block content %}
+<div class="fade-in">
+    <!-- Page Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1 class="h3 mb-0">
+            <i class="fas fa-chart-line me-2 text-primary"></i>Analytics Dashboard
+        </h1>
+        <div class="d-flex gap-2">
+            <button class="btn btn-outline-primary btn-sm" onclick="refreshAnalytics()">
+                <i class="fas fa-sync-alt me-1"></i>Refresh
+            </button>
+            <button class="btn btn-primary btn-sm" onclick="exportAnalytics()">
+                <i class="fas fa-download me-1"></i>Export Report
+            </button>
+        </div>
+    </div>
+
+    <!-- Date Range Selector -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <div class="row g-3">
+                <div class="col-md-3">
+                    <label for="startDate" class="form-label">Start Date</label>
+                    <input type="date" class="form-control" id="startDate" value="{{ start_date }}">
+                </div>
+                <div class="col-md-3">
+                    <label for="endDate" class="form-label">End Date</label>
+                    <input type="date" class="form-control" id="endDate" value="{{ end_date }}">
+                </div>
+                <div class="col-md-3">
+                    <label for="timeGranularity" class="form-label">Granularity</label>
+                    <select class="form-select" id="timeGranularity">
+                        <option value="day">Daily</option>
+                        <option value="week">Weekly</option>
+                        <option value="month">Monthly</option>
+                    </select>
+                </div>
+                <div class="col-md-3 d-flex align-items-end">
+                    <button class="btn btn-primary w-100" onclick="updateAnalytics()">
+                        <i class="fas fa-filter me-1"></i>Apply Filters
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Key Metrics -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card">
+                <div class="card-body">
+                    <h6 class="card-title text-muted">Total Sessions</h6>
+                    <h3 class="card-text" id="totalSessions">0</h3>
+                    <small class="text-success" id="sessionsChange">
+                        <i class="fas fa-arrow-up me-1"></i>0%
+                    </small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card">
+                <div class="card-body">
+                    <h6 class="card-title text-muted">Active Users</h6>
+                    <h3 class="card-text" id="activeUsers">0</h3>
+                    <small class="text-success" id="usersChange">
+                        <i class="fas fa-arrow-up me-1"></i>0%
+                    </small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card">
+                <div class="card-body">
+                    <h6 class="card-title text-muted">Avg Session Duration</h6>
+                    <h3 class="card-text" id="avgDuration">0m</h3>
+                    <small class="text-success" id="durationChange">
+                        <i class="fas fa-arrow-up me-1"></i>0%
+                    </small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card">
+                <div class="card-body">
+                    <h6 class="card-title text-muted">Messages per Session</h6>
+                    <h3 class="card-text" id="messagesPerSession">0</h3>
+                    <small class="text-danger" id="messagesChange">
+                        <i class="fas fa-arrow-down me-1"></i>0%
+                    </small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Charts -->
+    <div class="row mb-4">
+        <div class="col-lg-8">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-chart-area me-2"></i>Activity Over Time
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="chart-container">
+                        <canvas id="activityOverTimeChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-clock me-2"></i>Session Times
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="chart-container">
+                        <canvas id="sessionTimesChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Secondary Charts -->
+    <div class="row">
+        <div class="col-lg-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-car me-2"></i>Top Vehicle Models
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="chart-container">
+                        <canvas id="topModelsChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-map-marker-alt me-2"></i>User Locations
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="chart-container">
+                        <canvas id="userLocationsChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+    loadAnalyticsData();
+});
+
+function loadAnalyticsData() {
+    const startDate = document.getElementById('startDate').value;
+    const endDate = document.getElementById('endDate').value;
+    const granularity = document.getElementById('timeGranularity').value;
+
+    fetch(`/admin/api/analytics?start_date=${startDate}&end_date=${endDate}&granularity=${granularity}`)
+        .then(response => response.json())
+        .then(data => {
+            updateMetrics(data.metrics);
+            renderCharts(data.charts);
+        })
+        .catch(error => {
+            console.error('Error loading analytics data:', error);
+        });
+}
+
+function updateMetrics(metrics) {
+    document.getElementById('totalSessions').textContent = metrics.total_sessions.toLocaleString();
+    document.getElementById('activeUsers').textContent = metrics.active_users.toLocaleString();
+    document.getElementById('avgDuration').textContent = `${Math.floor(metrics.avg_duration / 60)}m ${Math.floor(metrics.avg_duration % 60)}s`;
+    document.getElementById('messagesPerSession').textContent = metrics.messages_per_session.toFixed(1);
+
+    updateChangeIndicator('sessionsChange', metrics.sessions_change);
+    updateChangeIndicator('usersChange', metrics.users_change);
+    updateChangeIndicator('durationChange', metrics.duration_change);
+    updateChangeIndicator('messagesChange', metrics.messages_change);
+}
+
+function updateChangeIndicator(elementId, change) {
+    const element = document.getElementById(elementId);
+    if (change > 0) {
+        element.className = 'text-success';
+        element.innerHTML = `<i class="fas fa-arrow-up me-1"></i>${Math.abs(change)}%`;
+    } else if (change < 0) {
+        element.className = 'text-danger';
+        element.innerHTML = `<i class="fas fa-arrow-down me-1"></i>${Math.abs(change)}%`;
+    } else {
+        element.className = 'text-muted';
+        element.innerHTML = `<i class="fas fa-equals me-1"></i>0%`;
+    }
+}
+
+function renderCharts(chartData) {
+    const activityCtx = document.getElementById('activityOverTimeChart').getContext('2d');
+    new Chart(activityCtx, {
+        type: 'line',
+        data: {
+            labels: chartData.activity_over_time.labels,
+            datasets: [
+                {
+                    label: 'Sessions',
+                    data: chartData.activity_over_time.sessions,
+                    borderColor: 'rgba(79, 70, 229, 1)',
+                    backgroundColor: 'rgba(79, 70, 229, 0.1)',
+                    tension: 0.3,
+                    fill: true
+                },
+                {
+                    label: 'Messages',
+                    data: chartData.activity_over_time.messages,
+                    borderColor: 'rgba(34, 197, 94, 1)',
+                    backgroundColor: 'rgba(34, 197, 94, 0.1)',
+                    tension: 0.3,
+                    fill: true
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { position: 'top' },
+                tooltip: { mode: 'index', intersect: false }
+            },
+            scales: {
+                x: { grid: { display: false } },
+                y: { beginAtZero: true }
+            }
+        }
+    });
+
+    const timesCtx = document.getElementById('sessionTimesChart').getContext('2d');
+    new Chart(timesCtx, {
+        type: 'bar',
+        data: {
+            labels: chartData.session_times.labels,
+            datasets: [{
+                label: 'Sessions by Hour',
+                data: chartData.session_times.data,
+                backgroundColor: 'rgba(59, 130, 246, 0.7)',
+                borderColor: 'rgba(59, 130, 246, 1)',
+                borderWidth: 1
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { display: false } },
+            scales: { y: { beginAtZero: true } }
+        }
+    });
+
+    const modelsCtx = document.getElementById('topModelsChart').getContext('2d');
+    new Chart(modelsCtx, {
+        type: 'bar',
+        data: {
+            labels: chartData.top_models.labels,
+            datasets: [{
+                label: 'Sessions',
+                data: chartData.top_models.data,
+                backgroundColor: [
+                    'rgba(239, 68, 68, 0.7)',
+                    'rgba(34, 197, 94, 0.7)',
+                    'rgba(59, 130, 246, 0.7)',
+                    'rgba(168, 85, 247, 0.7)',
+                    'rgba(245, 158, 11, 0.7)'
+                ],
+                borderColor: [
+                    'rgba(239, 68, 68, 1)',
+                    'rgba(34, 197, 94, 1)',
+                    'rgba(59, 130, 246, 1)',
+                    'rgba(168, 85, 247, 1)',
+                    'rgba(245, 158, 11, 1)'
+                ],
+                borderWidth: 1
+            }]
+        },
+        options: {
+            indexAxis: 'y',
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { display: false } }
+        }
+    });
+
+    const locationsCtx = document.getElementById('userLocationsChart').getContext('2d');
+    new Chart(locationsCtx, {
+        type: 'doughnut',
+        data: {
+            labels: chartData.user_locations.labels,
+            datasets: [{
+                data: chartData.user_locations.data,
+                backgroundColor: [
+                    'rgba(239, 68, 68, 0.7)',
+                    'rgba(34, 197, 94, 0.7)',
+                    'rgba(59, 130, 246, 0.7)',
+                    'rgba(168, 85, 247, 0.7)',
+                    'rgba(245, 158, 11, 0.7)',
+                    'rgba(107, 114, 128, 0.7)'
+                ],
+                borderWidth: 1
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { position: 'right' } }
+        }
+    });
+}
+
+function updateAnalytics() {
+    Chart.helpers.each(Chart.instances, function(instance) {
+        instance.destroy();
+    });
+    loadAnalyticsData();
+}
+
+function refreshAnalytics() {
+    updateAnalytics();
+}
+
+function exportAnalytics() {
+    const startDate = document.getElementById('startDate').value;
+    const endDate = document.getElementById('endDate').value;
+    window.open(`/admin/export/analytics?start_date=${startDate}&end_date=${endDate}`, '_blank');
+}
+</script>
+{% endblock %}

@@ -1,0 +1,49 @@
+# Core framework
+fastapi
+uvicorn
+
+# Templating
+jinja2
+
+# Static files, sessions, file upload
+aiofiles
+python-multipart
+starlette
+
+# Logging and env
+python-dotenv
+
+# Security
+httpx
+httpbasic
+
+# LLM + Vision AI
+groq
+ultralytics
+opencv-python
+Pillow
+
+# Data science
+numpy
+pandas
+scikit-learn
+
+# PostgreSQL drivers
+psycopg[binary]
+
+# Google sign-in
+authlib
+itsdangerous
+
+# Database
+sqlalchemy
+asyncpg
+
+# Google OAuth2 support
+google-auth
+google-auth-oauthlib
+# .env management
+python-dotenv
+
+# CORS
+fastapi[all]

@@ -1,0 +1,256 @@
+{% extends "admin/base.html" %}
+
+{% block title %}Dashboard - Auto-Mate Admin{% endblock %}
+
+{% block content %}
+<div class="fade-in">
+    <!-- Page Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1 class="h3 mb-0">
+            <i class="fas fa-tachometer-alt me-2 text-primary"></i>Dashboard Overview
+        </h1>
+        <div class="d-flex gap-2">
+            <button class="btn btn-outline-primary btn-sm" onclick="refreshDashboard()">
+                <i class="fas fa-sync-alt me-1"></i>Refresh
+            </button>
+            <button class="btn btn-primary btn-sm" onclick="exportReport()">
+                <i class="fas fa-download me-1"></i>Export Report
+            </button>
+        </div>
+    </div>
+
+    <!-- Statistics Cards -->
+    <div class="row mb-4">
+        <div class="col-xl-3 col-md-6">
+            <div class="card text-white bg-primary stat-card">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h5 class="card-title">
+                                <i class="fas fa-users me-2"></i>Total Users
+                            </h5>
+                            <p class="card-text display-4">{{ stats.total_users or 0 }}</p>
+                            <small class="opacity-75">
+                                <i class="fas fa-arrow-up me-1"></i>+12% from last month
+                            </small>
+                        </div>
+                        <div class="stat-icon">
+                            <i class="fas fa-users fa-2x opacity-50"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-xl-3 col-md-6">
+            <div class="card text-white bg-success stat-card">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h5 class="card-title">
+                                <i class="fas fa-comments me-2"></i>Total Sessions
+                            </h5>
+                            <p class="card-text display-4">{{ stats.total_sessions or 0 }}</p>
+                            <small class="opacity-75">
+                                <i class="fas fa-arrow-up me-1"></i>+8% from last week
+                            </small>
+                        </div>
+                        <div class="stat-icon">
+                            <i class="fas fa-comments fa-2x opacity-50"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-xl-3 col-md-6">
+            <div class="card text-white bg-info stat-card">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h5 class="card-title">
+                                <i class="fas fa-envelope me-2"></i>Total Messages
+                            </h5>
+                            <p class="card-text display-4">{{ stats.total_messages or 0 }}</p>
+                            <small class="opacity-75">
+                                <i class="fas fa-arrow-up me-1"></i>+15% from yesterday
+                            </small>
+                        </div>
+                        <div class="stat-icon">
+                            <i class="fas fa-envelope fa-2x opacity-50"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-xl-3 col-md-6">
+            <div class="card text-white bg-warning stat-card">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h5 class="card-title">
+                                <i class="fas fa-bolt me-2"></i>Active Today
+                            </h5>
+                            <p class="card-text display-4">{{ stats.active_today or 0 }}</p>
+                            <small class="opacity-75">
+                                <i class="fas fa-clock me-1"></i>Real-time data
+                            </small>
+                        </div>
+                        <div class="stat-icon">
+                            <i class="fas fa-bolt fa-2x opacity-50"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Charts Row -->
+    <div class="row mb-4">
+        <div class="col-lg-8">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">
+                        <i class="fas fa-chart-line me-2"></i>Activity Trends
+                    </h5>
+                    <div class="btn-group btn-group-sm" role="group">
+                        <input type="radio" class="btn-check" name="timeRange" id="week" checked>
+                        <label class="btn btn-outline-primary" for="week">Week</label>
+                        <input type="radio" class="btn-check" name="timeRange" id="month">
+                        <label class="btn btn-outline-primary" for="month">Month</label>
+                        <input type="radio" class="btn-check" name="timeRange" id="year">
+                        <label class="btn btn-outline-primary" for="year">Year</label>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="chart-container">
+                        <canvas id="activityChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-lg-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-car me-2"></i>Popular Car Models
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="chart-container">
+                        <canvas id="modelsChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Recent Activity & System Status -->
+    <div class="row">
+        <div class="col-lg-8">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-history me-2"></i>Recent Activity
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="activity-feed">
+                        <div class="activity-item">
+                            <div class="activity-icon bg-primary">
+                                <i class="fas fa-user-plus"></i>
+                            </div>
+                            <div class="activity-content">
+                                <p class="mb-1">New user registered: <strong>user_12345</strong></p>
+                                <small class="text-muted">2 minutes ago</small>
+                            </div>
+                        </div>
+                        <div class="activity-item">
+                            <div class="activity-icon bg-success">
+                                <i class="fas fa-comments"></i>
+                            </div>
+                            <div class="activity-content">
+                                <p class="mb-1">New diagnostic session started for <strong>2020 Toyota Camry</strong></p>
+                                <small class="text-muted">5 minutes ago</small>
+                            </div>
+                        </div>
+                        <div class="activity-item">
+                            <div class="activity-icon bg-info">
+                                <i class="fas fa-wrench"></i>
+                            </div>
+                            <div class="activity-content">
+                                <p class="mb-1">System maintenance completed successfully</p>
+                                <small class="text-muted">1 hour ago</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-lg-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-server me-2"></i>System Status
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="system-status">
+                        <div class="status-item">
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <span>API Server</span>
+                                <span class="badge bg-success">Online</span>
+                            </div>
+                            <div class="progress" style="height: 4px;">
+                                <div class="progress-bar bg-success" style="width: 98%"></div>
+                            </div>
+                        </div>
+                        <div class="status-item">
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <span>Database</span>
+                                <span class="badge bg-success">Connected</span>
+                            </div>
+                            <div class="progress" style="height: 4px;">
+                                <div class="progress-bar bg-success" style="width: 95%"></div>
+                            </div>
+                        </div>
+                        <div class="status-item">
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <span>AI Service</span>
+                                <span class="badge bg-warning">Slow</span>
+                            </div>
+                            <div class="progress" style="height: 4px;">
+                                <div class="progress-bar bg-warning" style="width: 75%"></div>
+                            </div>
+                        </div>
+                        <div class="status-item">
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <span>Storage</span>
+                                <span class="badge bg-success">Healthy</span>
+                            </div>
+                            <div class="progress" style="height: 4px;">
+                                <div class="progress-bar bg-success" style="width: 88%"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function refreshDashboard() {
+    location.reload();
+}
+
+function exportReport() {
+    window.open('/admin/export/dashboard-report', '_blank');
+}
+</script>
+{% endblock %}

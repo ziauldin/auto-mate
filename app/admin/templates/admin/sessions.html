@@ -1,0 +1,428 @@
+{% extends "admin/base.html" %}
+
+{% block title %}Session Management - Auto-Mate Admin{% endblock %}
+
+{% block content %}
+<div class="fade-in">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1 class="h3 mb-0">
+            <i class="fas fa-comments me-2 text-primary"></i>Session Management
+            {% if request.query_params.get('user_id') %}
+                <small class="text-muted">- User: {{ request.query_params.get('user_id') }}</small>
+            {% endif %}
+        </h1>
+        <div class="d-flex gap-2">
+            <button class="btn btn-outline-primary btn-sm" onclick="exportSessions()">
+                <i class="fas fa-download me-1"></i>Export Data
+            </button>
+            <button class="btn btn-outline-secondary btn-sm" onclick="refreshSessions()">
+                <i class="fas fa-sync-alt me-1"></i>Refresh
+            </button>
+        </div>
+    </div>
+
+    <div class="card mb-4">
+        <div class="card-body">
+            <div class="row g-3">
+                <div class="col-md-4">
+                    <div class="input-group">
+                        <span class="input-group-text">
+                            <i class="fas fa-search"></i>
+                        </span>
+                        <input type="text" class="form-control" placeholder="Search sessions..." id="sessionSearch">
+                    </div>
+                </div>
+                <div class="col-md-2">
+                    <select class="form-select" id="manufacturerFilter">
+                        <option value="">All Brands</option>
+                        <option value="Toyota">Toyota</option>
+                        <option value="Honda">Honda</option>
+                        <option value="Ford">Ford</option>
+                        <option value="BMW">BMW</option>
+                        <option value="Mercedes">Mercedes</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <select class="form-select" id="dateFilter">
+                        <option value="">All Time</option>
+                        <option value="today">Today</option>
+                        <option value="week">This Week</option>
+                        <option value="month">This Month</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <select class="form-select" id="statusFilter">
+                        <option value="">All Status</option>
+                        <option value="active">Active</option>
+                        <option value="completed">Completed</option>
+                        <option value="abandoned">Abandoned</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <button class="btn btn-outline-secondary w-100" onclick="clearSessionFilters()">
+                        <i class="fas fa-times me-1"></i>Clear
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <h5 class="mb-0">
+                <i class="fas fa-table me-2"></i>All Sessions
+                <span class="badge bg-primary ms-2" id="sessionCount">{{ sessions|length }}</span>
+            </h5>
+            <div class="d-flex align-items-center gap-3">
+                <small class="text-muted">Showing {{ sessions|length }} sessions</small>
+                <div class="btn-group btn-group-sm" role="group">
+                    <button type="button" class="btn btn-outline-secondary active" onclick="setPageSize(10, this)">10</button>
+                    <button type="button" class="btn btn-outline-secondary" onclick="setPageSize(25, this)">25</button>
+                    <button type="button" class="btn btn-outline-secondary" onclick="setPageSize(50, this)">50</button>
+                </div>
+            </div>
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover mb-0" id="sessionsTable">
+                    <thead class="table-light">
+                        <tr>
+                            <th>
+                                <input type="checkbox" class="form-check-input" id="selectAllSessions">
+                            </th>
+                            <th>Session ID</th>
+                            <th>User</th>
+                            <th>Vehicle</th>
+                            <th>Status</th>
+                            <th>Messages</th>
+                            <th>Duration</th>
+                            <th>Created</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for item in sessions %}
+                        {% set session = item.session %}
+                        <tr data-session-id="{{ session.id }}">
+                            <td>
+                                <input type="checkbox" class="form-check-input session-checkbox" value="{{ session.id }}">
+                            </td>
+                            <td>
+                                <div class="d-flex align-items-center">
+                                    <div class="session-indicator me-2">
+                                        {# Assuming 'now()' is available via a custom Jinja2 global or passed in context #}
+                                        {% if item.message_count > 10 and session.updated_at and (now() - session.updated_at).total_seconds() < 3600 %}
+                                            <i class="fas fa-circle text-success" title="Active session"></i>
+                                        {% elif item.message_count > 5 and session.updated_at and (now() - session.updated_at).total_seconds() < 3600 %}
+                                            <i class="fas fa-circle text-warning" title="Moderate activity"></i>
+                                        {% else %}
+                                            <i class="fas fa-circle text-secondary" title="Low activity or inactive"></i>
+                                        {% endif %}
+                                    </div>
+                                    <div>
+                                        <code class="text-primary">{{ session.id[:8] }}...</code>
+                                        <br><small class="text-muted">{{ session.id[-8:] }}</small>
+                                    </div>
+                                </div>
+                            </td>
+                            <td>
+                                <div class="d-flex align-items-center">
+                                    <div class="avatar-sm bg-info text-white rounded-circle d-flex align-items-center justify-content-center me-2">
+                                        {{ session.user_id[:2].upper() }}
+                                    </div>
+                                    <div>
+                                        <strong>{{ session.user_id }}</strong>
+                                        <br><small class="text-muted">{{ session.user_id[-8:] }}</small>
+                                    </div>
+                                </div>
+                            </td>
+                            <td>
+                                <div class="vehicle-info">
+                                    <strong>{{ session.year }} {{ session.manufacturer }}</strong>
+                                    <br><span class="text-muted">{{ session.model }}</span>
+                                </div>
+                            </td>
+                            <td>
+                                {% if item.message_count > 0 %}
+                                    {% if session.updated_at and (now() - session.updated_at).total_seconds() < 3600 %}
+                                        <span class="badge bg-success">Active</span>
+                                    {% else %}
+                                        <span class="badge bg-secondary">Completed</span>
+                                    {% endif %}
+                                {% else %}
+                                    <span class="badge bg-warning">New</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <div class="d-flex align-items-center">
+                                    <span class="badge bg-info me-2">{{ item.message_count }}</span>
+                                    {% if item.message_count > 20 %}
+                                        <i class="fas fa-fire text-danger" title="High activity"></i>
+                                    {% elif item.message_count > 10 %}
+                                        <i class="fas fa-chart-line text-warning" title="Good activity"></i>
+                                    {% endif %}
+                                </div>
+                            </td>
+                            <td>
+                                <span class="text-muted">
+                                    {{ session.duration or 'Ongoing' }}
+                                </span>
+                            </td>
+                            <td>
+                                <div>
+                                    <span title="{{ session.created_at }}">
+                                        {{ session.created_at.strftime('%m/%d %H:%M') }}
+                                    </span>
+                                    <br><small class="text-muted">{{ session.created_at_relative or 'Recently' }}</small>
+                                </div>
+                            </td>
+                            <td>
+                                <div class="btn-group btn-group-sm" role="group">
+                                    <button class="btn btn-outline-primary" onclick="viewSessionDetails('{{ session.id }}')" title="View Details">
+                                        <i class="fas fa-eye"></i>
+                                    </button>
+                                    <button class="btn btn-outline-info" onclick="exportSession('{{ session.id }}')" title="Export">
+                                        <i class="fas fa-download"></i>
+                                    </button>
+                                    <button class="btn btn-outline-success" onclick="analyzeSession('{{ session.id }}')" title="Analyze">
+                                        <i class="fas fa-chart-bar"></i>
+                                    </button>
+                                    <button class="btn btn-outline-danger" onclick="deleteSession('{{ session.id }}')" title="Delete">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        <div class="card-footer">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <button class="btn btn-outline-danger btn-sm" id="bulkDeleteSessionsBtn" style="display: none;" onclick="bulkDeleteSessions()">
+                        <i class="fas fa-trash me-1"></i>Delete Selected
+                    </button>
+                    <button class="btn btn-outline-info btn-sm" id="bulkExportBtn" style="display: none;" onclick="bulkExportSessions()">
+                        <i class="fas fa-download me-1"></i>Export Selected
+                    </button>
+                </div>
+                <nav>
+                    <ul class="pagination pagination-sm mb-0">
+                        <li class="page-item disabled">
+                            <a class="page-link" href="#" tabindex="-1">Previous</a>
+                        </li>
+                        <li class="page-item active"><a class="page-link" href="#">1</a></li>
+                        <li class="page-item"><a class="page-link" href="#">2</a></li>
+                        <li class="page-item"><a class="page-link" href="#">3</a></li>
+                        <li class="page-item">
+                            <a class="page-link" href="#">Next</a>
+                        </li>
+                    </ul>
+                </nav>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="sessionDetailsModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Session Details</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="sessionDetailsContent">
+                </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-primary" id="exportCurrentSessionBtn">Export Session</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+---
+
+{% block extra_js %}
+<script>
+    // Function to get query parameters (more robust than direct window.location.search)
+    function getQueryParam(name) {
+        const urlParams = new URLSearchParams(window.location.search);
+        return urlParams.get(name);
+    }
+
+    function exportSessions() {
+        window.open('/admin/export/sessions', '_blank');
+    }
+
+    function refreshSessions() {
+        location.reload();
+    }
+
+    function clearSessionFilters() {
+        document.getElementById('sessionSearch').value = '';
+        document.getElementById('manufacturerFilter').value = '';
+        document.getElementById('dateFilter').value = '';
+        document.getElementById('statusFilter').value = '';
+        // Trigger search to reset table (assuming you have a JS function for filtering based on inputs)
+        // For now, we'll just reload to clear existing URL parameters if any were set by filters
+        if (window.location.search) { // Check if there are any query params
+            window.location.href = window.location.pathname; // Reload without query params
+        } else {
+            // If no query params, just dispatch an event if you have live filtering
+            const event = new Event('input');
+            document.getElementById('sessionSearch').dispatchEvent(event);
+        }
+    }
+
+    function setPageSize(size, element) {
+        // Update page size
+        console.log('Setting page size to:', size);
+        // Update active button
+        document.querySelectorAll('.btn-group .btn').forEach(btn => btn.classList.remove('active'));
+        element.classList.add('active');
+        // In a real application, you'd likely trigger a data reload here with the new page size
+        // e.g., fetchData({ pageSize: size });
+    }
+
+    let currentModalSessionId = null; // Store the session ID for the modal
+
+    function viewSessionDetails(sessionId) {
+        currentModalSessionId = sessionId; // Set the current session ID
+        // Load session details into modal
+        fetch(`/admin/sessions/${sessionId}/details`)
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                return response.text();
+            })
+            .then(html => {
+                document.getElementById('sessionDetailsContent').innerHTML = html;
+                new bootstrap.Modal(document.getElementById('sessionDetailsModal')).show();
+            })
+            .catch(error => {
+                console.error('Error loading session details:', error);
+                alert('Failed to load session details. Please try again.');
+            });
+    }
+
+    function exportCurrentSession() {
+        if (currentModalSessionId) {
+            window.open(`/admin/sessions/${currentModalSessionId}/export`, '_blank');
+        } else {
+            alert('No session selected for export.');
+        }
+    }
+
+    function exportSession(sessionId) {
+        window.open(`/admin/sessions/${sessionId}/export`, '_blank');
+    }
+
+    function analyzeSession(sessionId) {
+        window.open(`/admin/sessions/${sessionId}/analyze`, '_blank');
+    }
+
+    function deleteSession(sessionId) {
+        if (confirm('Are you sure you want to delete this session? This action cannot be undone.')) {
+            fetch(`/admin/sessions/${sessionId}`, {
+                method: 'DELETE'
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                return response.json(); // Assuming your delete endpoint returns JSON confirmation
+            })
+            .then(data => {
+                console.log('Delete successful:', data);
+                location.reload(); // Reload the page to reflect changes
+            })
+            .catch(error => {
+                console.error('Error deleting session:', error);
+                alert('Failed to delete session. Please try again.');
+            });
+        }
+    }
+
+    function bulkDeleteSessions() {
+        const selected = Array.from(document.querySelectorAll('.session-checkbox:checked')).map(cb => cb.value);
+        if (selected.length > 0 && confirm(`Are you sure you want to delete ${selected.length} selected sessions? This action cannot be undone.`)) {
+            fetch('/admin/sessions/bulk-delete', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    session_ids: selected
+                })
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                return response.json(); // Assuming bulk delete returns JSON confirmation
+            })
+            .then(data => {
+                console.log('Bulk delete successful:', data);
+                location.reload();
+            })
+            .catch(error => {
+                console.error('Error during bulk delete:', error);
+                alert('Failed to delete sessions. Please try again.');
+            });
+        }
+    }
+
+    function bulkExportSessions() {
+        const selected = Array.from(document.querySelectorAll('.session-checkbox:checked')).map(cb => cb.value);
+        if (selected.length > 0) {
+            // Encode the IDs to ensure they are safely passed in the URL
+            const encodedIds = encodeURIComponent(selected.join(','));
+            window.open(`/admin/export/sessions?ids=${encodedIds}`, '_blank');
+        } else {
+            alert('Please select sessions to export.');
+        }
+    }
+
+    // Handle select all checkbox
+    document.getElementById('selectAllSessions').addEventListener('change', function() {
+        const checkboxes = document.querySelectorAll('.session-checkbox');
+        checkboxes.forEach(cb => cb.checked = this.checked);
+        toggleSessionBulkActions();
+    });
+
+    // Handle individual checkboxes
+    document.querySelectorAll('.session-checkbox').forEach(cb => {
+        cb.addEventListener('change', toggleSessionBulkActions);
+    });
+
+    function toggleSessionBulkActions() {
+        const selected = document.querySelectorAll('.session-checkbox:checked').length;
+        const bulkDeleteBtn = document.getElementById('bulkDeleteSessionsBtn');
+        const bulkExportBtn = document.getElementById('bulkExportBtn');
+        bulkDeleteBtn.style.display = selected > 0 ? 'inline-block' : 'none';
+        bulkExportBtn.style.display = selected > 0 ? 'inline-block' : 'none';
+    }
+
+    // Initialize bulk action button visibility on page load
+    document.addEventListener('DOMContentLoaded', toggleSessionBulkActions);
+
+    // Attach exportCurrentSession to the modal's export button
+    document.getElementById('exportCurrentSessionBtn').addEventListener('click', exportCurrentSession);
+
+    // Initial check for user_id in URL on page load and set filter if present
+    document.addEventListener('DOMContentLoaded', () => {
+        const userIdFromUrl = getQueryParam('user_id');
+        if (userIdFromUrl) {
+            // You might want to display this in a dedicated filter field, or just in the header as you have.
+            // If you have a specific input for user_id filtering, you could set its value here:
+            // document.getElementById('userIdFilterInput').value = userIdFromUrl;
+        }
+    });
+
+</script>
+{% endblock %}
